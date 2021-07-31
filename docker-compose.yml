@@ -1,0 +1,45 @@
+version: '3'
+
+services: 
+    nodeapp:
+        build: 
+            context: ./node
+        container_name: desafio-node-app
+        tty: true
+        entrypoint: dockerize -wait tcp://nodedb:3306 -timeout 50s docker-entrypoint.sh
+        command: node index.js
+        networks: 
+            - desafio-node-network
+        depends_on: 
+            - nodedb
+
+    nodedb:
+        build: 
+            context: ./mysql
+        command: --innodb-use-native-aio=0
+        container_name: desafio-node-db
+        restart: always
+        tty: true
+        volumes: 
+          - ./mysqlDB:/var/lib/mysql
+        networks: 
+          - desafio-node-network
+
+        
+    nodenginx:
+        build:
+            context: ./nginx
+        container_name: desafio-node-nginx
+        entrypoint: dockerize -wait http://nodeapp:3000/ping -timeout 50s nginx -g "daemon off;"
+        restart: always
+        tty: true
+        ports:
+            - "8080:80"
+        networks: 
+            - desafio-node-network
+        depends_on: 
+            - nodeapp
+
+networks: 
+    desafio-node-network:
+        driver: bridge 
